@@ -27,13 +27,13 @@ class TempSensorDecode
   private:
   	TempSensorDecode() {}
 
-    static float _temperature;
-    static uint8_t _humidity;
-    static bool _isButtonPressed;
-    static uint8_t _batteryState;
-    static uint8_t _channel;
+    static volatile int16_t _temperature_raw;
+    static volatile uint8_t _humidity;
+    static volatile bool _isButtonPressed;
+    static volatile uint8_t _batteryState;
+    static volatile uint8_t _channel;
     static volatile bool _hasNewData;
-    static bool _hasAnyData;
+    static volatile bool _hasAnyData;
 
     static void _handleInterrupt();
     static void _handleDuration(unsigned long duration);

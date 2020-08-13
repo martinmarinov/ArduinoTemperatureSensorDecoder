@@ -26,13 +26,13 @@
     #define ISR_PREFIX
 #endif
 
-float TempSensorDecode::_temperature;
-uint8_t TempSensorDecode::_humidity;
-bool TempSensorDecode::_isButtonPressed;
-uint8_t TempSensorDecode::_batteryState;
-uint8_t TempSensorDecode::_channel;
+volatile int16_t TempSensorDecode::_temperature_raw;
+volatile uint8_t TempSensorDecode::_humidity;
+volatile bool TempSensorDecode::_isButtonPressed;
+volatile uint8_t TempSensorDecode::_batteryState;
+volatile uint8_t TempSensorDecode::_channel;
 volatile bool TempSensorDecode::_hasNewData = false;
-bool TempSensorDecode::_hasAnyData = false;
+volatile bool TempSensorDecode::_hasAnyData = false;
 
 // API
 
@@ -47,7 +47,7 @@ bool TempSensorDecode::hasAnyData() {
 }
 
 float TempSensorDecode::getTemperature() {
-  return TempSensorDecode::_temperature;
+  return float(TempSensorDecode::_temperature_raw) / 10;
 }
 
 uint8_t TempSensorDecode::getHumidity() {
@@ -127,11 +127,11 @@ void TempSensorDecode::_handleDuration(unsigned long duration) {
 void TempSensorDecode::_handlePacket(uint64_t packet) {
   uint8_t battery = (packet >> 20) & 0x8;
   uint8_t channel = 1 + ((packet >> 20) & 0x3); // Channels start at 0
-  float temperature = float((packet >> 8) & 0xFFF) / 10;
+  int16_t temperature_raw = (packet >> 8) & 0xFFF; // ESP32 do not support floating point operations in interrupts
   uint8_t humidity = packet & 0xFF;
   bool button = (packet >> 20) & 0x4;
 
-  if (temperature > 55.0 || temperature < -25.0) {
+  if (temperature_raw > 550 || temperature_raw < -250) {
     // invalid temperature
     return;
   }
@@ -141,7 +141,7 @@ void TempSensorDecode::_handlePacket(uint64_t packet) {
     return;
   }
 
-  TempSensorDecode::_temperature = temperature;
+  TempSensorDecode::_temperature_raw = temperature_raw;
   TempSensorDecode::_humidity = humidity;
   TempSensorDecode::_channel = channel;
   TempSensorDecode::_batteryState = battery;
