@@ -23,6 +23,7 @@ class TempSensorDecode
     static bool getIsButtonPressed();
     static uint8_t getBatteryState();
     static uint8_t getChannel();
+    static uint64_t getRawPacket();
 
   private:
   	TempSensorDecode() {}
@@ -34,6 +35,7 @@ class TempSensorDecode
     static volatile uint8_t _channel;
     static volatile bool _hasNewData;
     static volatile bool _hasAnyData;
+    static volatile uint64_t _packet_raw;
 
     static void _handleInterrupt();
     static void _handleDuration(unsigned long duration);
