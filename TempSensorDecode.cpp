@@ -33,6 +33,7 @@ volatile uint8_t TempSensorDecode::_batteryState;
 volatile uint8_t TempSensorDecode::_channel;
 volatile bool TempSensorDecode::_hasNewData = false;
 volatile bool TempSensorDecode::_hasAnyData = false;
+volatile uint64_t TempSensorDecode::_packet_raw;
 
 // API
 
@@ -64,6 +65,10 @@ uint8_t TempSensorDecode::getBatteryState() {
 
 uint8_t TempSensorDecode::getChannel() {
   return TempSensorDecode::_channel;
+}
+
+uint64_t TempSensorDecode::getRawPacket() {
+  return TempSensorDecode::_packet_raw;
 }
 
 // Driver & Signal processing
@@ -127,9 +132,15 @@ void TempSensorDecode::_handleDuration(unsigned long duration) {
 void TempSensorDecode::_handlePacket(uint64_t packet) {
   uint8_t battery = (packet >> 20) & 0x8;
   uint8_t channel = 1 + ((packet >> 20) & 0x3); // Channels start at 0
-  int16_t temperature_raw = (packet >> 8) & 0xFFF; // ESP32 do not support floating point operations in interrupts
+  // ESP32 do not support floating point operations in interrupts. Arrange
+  // to shift the left-aligned 12-bit value as an int16_t so that we get
+  // sign extension for the final value to support negative numbers.
+  int16_t temperature_raw = (packet >> 4) & 0xFFFF;
+  temperature_raw >>= 4;
   uint8_t humidity = packet & 0xFF;
   bool button = (packet >> 20) & 0x4;
+
+  TempSensorDecode::_packet_raw = packet;
 
   if (temperature_raw > 550 || temperature_raw < -250) {
     // invalid temperature
